@@ -40,12 +40,14 @@ object KafkaConsumerActor {
     final case class GetBeginningOffsets(partitions: Set[TopicPartition]) extends NoSerializationVerificationNeeded
     final case class GetEndOffsets(partitions: Set[TopicPartition]) extends NoSerializationVerificationNeeded
     final case class GetOffsetsForTimes(timestampsToSearch: Map[TopicPartition, Long]) extends NoSerializationVerificationNeeded
+    final case class GetCommittedOffset(partition: TopicPartition) extends NoSerializationVerificationNeeded
     //responses
     final case class Topics(response: Try[Map[String, List[PartitionInfo]]]) extends NoSerializationVerificationNeeded
     final case class PartitionsFor(response: Try[List[PartitionInfo]]) extends NoSerializationVerificationNeeded
     final case class BeginningOffsets(response: Try[Map[TopicPartition, Long]]) extends NoSerializationVerificationNeeded
     final case class EndOffsets(response: Try[Map[TopicPartition, Long]]) extends NoSerializationVerificationNeeded
     final case class OffsetsForTimes(response: Try[Map[TopicPartition, OffsetAndTimestamp]]) extends NoSerializationVerificationNeeded
+    final case class CommittedOffset(response: Try[OffsetAndMetadata]) extends NoSerializationVerificationNeeded
   }
 
   private[kafka] object Internal {
@@ -250,6 +252,11 @@ private[kafka] class KafkaConsumerActor[K, V](settings: ConsumerSettings[K, V])
           case (k, v) => k -> (v: java.lang.Long)
         }.asJava
         consumer.offsetsForTimes(search).asScala.toMap
+      })
+
+    case Metadata.GetCommittedOffset(partition) =>
+      sender ! Metadata.CommittedOffset(Try {
+        consumer.committed(partition)
       })
 
   }
